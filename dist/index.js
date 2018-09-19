@@ -106,6 +106,10 @@ parcelRequire = (function (modules, cache, entry, globalName) {
 })({"index.js":[function(require,module,exports) {
 'use strict';
 
+var _bs58check = require('bs58check');
+
+var _bs58check2 = _interopRequireDefault(_bs58check);
+
 var _tezexchangeTradebot = require('tezexchange-tradebot');
 
 var _tezexchangeTradebot2 = _interopRequireDefault(_tezexchangeTradebot);
@@ -117,7 +121,9 @@ const main = async () => {
     secret_key: 'edskRwCM7hMRBCFuqqAwkrvyrMiRNvA5NVjN8Neg9UfT5xUpcSRJQDb8y2HgBvwAzM6Ah9d4ykZ1HgN8N426ZYrntLES5gZv79'
   });
   const token_info = await api_client.getTokenInfo(api_client.tokens.TES, api_client.client.key_pair.public_key_hash);
-  console.log(api_client);
+  // const result = await api_client.createBuying(api_client.tokens.TES, 210, 1)
+  const result = await api_client.getOrders();
+  console.log(result);
 };
 
 main().catch(err => console.log(err));

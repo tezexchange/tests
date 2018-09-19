@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "test": "parcel watch src/index.js --target node"
+    "dev": "parcel watch src/index.js --target node"
   },
   "repository": {
     "type": "git",
@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/tezexchange/tests#readme",
   "dependencies": {
-    "tezexchange-tradebot": "^1.0.8"
+    "tezexchange-tradebot": "^1.0.10"
   },
   "devDependencies": {
     "parcel-bundler": "^1.9.7"
