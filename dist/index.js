@@ -106,10 +106,6 @@ parcelRequire = (function (modules, cache, entry, globalName) {
 })({"index.js":[function(require,module,exports) {
 'use strict';
 
-var _bs58check = require('bs58check');
-
-var _bs58check2 = _interopRequireDefault(_bs58check);
-
 var _tezexchangeTradebot = require('tezexchange-tradebot');
 
 var _tezexchangeTradebot2 = _interopRequireDefault(_tezexchangeTradebot);

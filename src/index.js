@@ -1,5 +1,3 @@
-import bs58check from 'bs58check'
-
 import tradebot from 'tezexchange-tradebot'
 
 const main = async () => {
