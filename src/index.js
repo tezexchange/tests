@@ -1,34 +1,33 @@
 import tradebot from 'tezexchange-tradebot'
+import Scene from './scene'
+
+const basicSceneComposition = async ({clients, tes_token}) => {
+  // const [price, _] = await Scene.createBuyingOrder({client: clients[1], token: tes_token})
+  const [price, _] = await Scene.createSellingOrder({client: clients[0], token: tes_token})
+  // await Scene.executeBuyingOrder({client: clients[0], owner: clients[1], price, token: tes_token})
+  await Scene.executeSellingOrder({client: clients[1], owner: clients[0], price, token: tes_token})
+  // await Scene.transferToken({client: clients[0], token: tes_token})
+}
 
 const main = async () => {
-  const api_client = await tradebot.getApiClient({
+  const client1 = await tradebot.getApiClient({
     // host: 'https://znetrpc.tezbox.com',
     secret_key: 'edskRwCM7hMRBCFuqqAwkrvyrMiRNvA5NVjN8Neg9UfT5xUpcSRJQDb8y2HgBvwAzM6Ah9d4ykZ1HgN8N426ZYrntLES5gZv79'
   })
+  const client2 = await tradebot.getApiClient({
+    secret_key: 'edskSAnVuT9KDLx77DECAWcqocUzE4KerS7WGaUHCVyRWrYk29RHiY5gWZPVa28EPYYbZKPYg8WaSRbvahGbTCQAJFJ31JiFBu'
+  })
 
-  const pkh = api_client.client.key_pair.public_key_hash
-  const tes_token = api_client.tokens.TES
+  const tes_token = client1.tokens.TES
 
-  if (0) {
-    // const op = await api_client.createBuying(tes_token, 210, 1)
-    // const op = await api_client.createSelling(tes_token, 342, 100)
-    // const op = await api_client.executeSelling(tes_token, 231, 'tz1UJPFiywU6uGeMpZnPrY4w7zNhLekvJaUo', 342 * 100 / 1000000)
-    const op = await api_client.executeBuying(tes_token, 210, 'tz1UJPFiywU6uGeMpZnPrY4w7zNhLekvJaUo', 100)
-    // const op = await api_client.cancelOrder(tes_token, false, 342)
-    // const op = await api_client.rewardLock(1000)
-    // const op = await api_client.rewardUnlock()
-    // const op = await api_client.rewardWithDraw()
-    // const op = await api_client.tokenTransfer(tes_token, tes_token, 300)
-    console.log(op)
-  } else {
-    // const result = await api_client.getTokenInfo(tes_token, pkh)
-    const result = await api_client.getOrders()
-    // const result = await api_client.getRewardInfo(pkh)
-    console.log(result)
-  }
+  await basicSceneComposition({
+    clients: [client1, client2],
+    tes_token
+  })
 
+  console.log('Finish!')
 }
 
 main().catch(err => {
-  console.log('ERR:' + err instanceof Error ? err : JSON.stringify(err, null, 2))
+  console.log(`\x1b[31m%s\x1b[0m`, 'ERR: ' + (err instanceof Error ? err : JSON.stringify(err, null, 2)))
 })
