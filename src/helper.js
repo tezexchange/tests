@@ -30,9 +30,7 @@ Op: ${op.operation_id}`)
       console.log(`\x1b[${result ? 32 : 31}m%s\x1b[0m`, result ? 'PASS' : 'FAIL')
 
       if (!result)
-        throw `Assert fail [${name}] @ 
-${equation_fn.toString()}
-      ` 
+        throw `Assert fail [${name}]` 
     }
   }
 }

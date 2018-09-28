@@ -3,10 +3,15 @@ import Scene from './scene'
 
 const basicSceneComposition = async ({clients, tes_token}) => {
   // const [price, _] = await Scene.createBuyingOrder({client: clients[1], token: tes_token})
-  const [price, _] = await Scene.createSellingOrder({client: clients[0], token: tes_token})
+  // const [price, _] = await Scene.createSellingOrder({client: clients[0], token: tes_token})
   // await Scene.executeBuyingOrder({client: clients[0], owner: clients[1], price, token: tes_token})
-  await Scene.executeSellingOrder({client: clients[1], owner: clients[0], price, token: tes_token})
+  // await Scene.executeSellingOrder({client: clients[1], owner: clients[0], price, token: tes_token})
   // await Scene.transferToken({client: clients[0], token: tes_token})
+  // await Scene.cancelOrder({client: clients[0], token: tes_token, price, is_buy: false})
+  // await Scene.rewardLock({client: clients[0]})
+  // await Scene.rewardUnlock({client: clients[0]})
+  await Scene.depositToReward({client: clients[0]})
+  await Scene.rewardWithdraw({client: clients[0]})
 }
 
 const main = async () => {

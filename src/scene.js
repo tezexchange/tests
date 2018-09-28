@@ -12,6 +12,15 @@ const genToken = (max = 1000) => {
   return Math.round(Math.random() * max)
 }
 
+export const cancelOrder = async ({client, token, is_buy, price}) => {
+  const owner = client.client.key_pair.public_key_hash
+  const op = await client.cancelOrder(token, is_buy, price)
+  await assert('Cancel order', op, client)(async () => {
+    const order = (await client.getOrders()).filter(x => x.is_buy == is_buy && x.price == price && x.owner == owner)
+    return !order.length
+  })
+}
+
 export const createBuyingOrder = async ({client, token, price, tez_amount}) => {
   price = price || genPrice()
   tez_amount = tez_amount || genTez()
@@ -129,12 +138,85 @@ export const transferToken = async ({client, token, receiver, token_amount}) => 
   return token_amount
 }
 
+export const rewardLock = async ({client, token_amount}) => {
+  const pkh = client.client.key_pair.public_key_hash
+  const tes_token = client.tokens.TES
+  const token_info = await client.getTokenInfo(tes_token, pkh)
+  const prev_locked = (await client.getRewardInfo(pkh)).locked_amount || 0
+
+  token_amount = token_amount || genToken(token_info.token_amount)
+
+  const op = await client.rewardLock(token_amount)
+  await assert('Lock reward', op, client)(async () => 
+    (await client.getRewardInfo(pkh)).locked_amount == +prev_locked + token_amount
+  )
+
+  return token_amount
+}
+
+export const rewardUnlock = async ({client}) => {
+  const pkh = client.client.key_pair.public_key_hash
+  const tes_token = client.tokens.TES
+  const prev_token_amount = (await client.getTokenInfo(tes_token, pkh)).token_amount
+  const locked_amount = (await client.getRewardInfo(pkh)).locked_amount || 0
+
+  const op = await client.rewardUnlock()
+  await assert('Unlock reward', op, client)(async () => {
+    const token_result = (await client.getTokenInfo(tes_token, pkh)).token_amount == +locked_amount + +prev_token_amount
+    const reward_result =  ((await client.getRewardInfo(pkh)).locked_amount || 0) == 0
+    return token_result && reward_result
+  })
+}
+
+export const rewardWithdraw = async ({client}) => {
+  const pkh = client.client.key_pair.public_key_hash
+  const reward_kt1 = client.contracts.reward
+  const prev_xtz = (await client.getHeadCustom('/context/contracts/' + pkh)).balance
+  const prev_reward_xtz = (await client.getHeadCustom('/context/contracts/' + reward_kt1)).balance
+  const reward_info = await client.getRewardInfo(pkh)
+  const locked_amount = reward_info.locked_amount || 0
+  const rewards = reward_info.rewards.filter(x => x.date > reward_info.lock_date)
+  const reward_value = rewards.reduce((acc, x) => Math.floor(locked_amount * x.xtz_amount / 100000000) + acc, 0)
+
+  const op = await client.rewardWithdraw()
+  await assert('Withdraw reward', op, client)(async () => {
+    const curr_xtz = (await client.getHeadCustom('/context/contracts/' + pkh)).balance
+    const curr_reward_xtz = (await client.getHeadCustom('/context/contracts/' + reward_kt1)).balance
+    return curr_xtz == +prev_xtz + reward_value && curr_reward_xtz == +prev_reward_xtz - reward_value
+  })
+}
+
+export const depositToReward = async ({client, xtz_amount}) => {
+  const pkh = client.client.key_pair.public_key_hash
+  const prev_xtz = (await client.getHeadCustom('/context/contracts/' + pkh)).balance
+  const reward_kt1 = client.contracts.reward
+  const prev_reward_xtz = (await client.getHeadCustom('/context/contracts/' + reward_kt1)).balance
+
+  xtz_amount = xtz_amount || genTez(+prev_xtz / 10 / 1000000)
+  const op = await client.client.transfer({
+    destination: reward_kt1,
+    amount: xtz_amount,
+    parameters: {
+      "bytes": "050505030b"
+    }
+  })
+  await assert('Deposit to reward contract', op, client)(async () => {
+    const curr_reward_xtz = (await client.getHeadCustom('/context/contracts/' + reward_kt1)).balance
+    const transferred_xtz = xtz_amount * 1000000
+    return curr_reward_xtz == +prev_reward_xtz + transferred_xtz
+  })
+}
 
 export default {
   createBuyingOrder,
   createSellingOrder,
   executeBuyingOrder,
   executeSellingOrder,
+  cancelOrder,
+  rewardLock,
+  rewardUnlock,
+  rewardWithdraw,
+  depositToReward,
   transferToken
 }
 
@@ -146,7 +228,7 @@ export default {
   //   // const op = await client1.cancelOrder(tes_token, false, 342)
   //   // const op = await client1.rewardLock(1000)
   //   // const op = await client1.rewardUnlock()
-  //   // const op = await client1.rewardWithDraw()
+  //   // const op = await client1.rewardWithdraw()
   //   // const op = await client1.tokenTransfer(tes_token, tes_token, 300)
   //   console.log(op)
   // } else {
