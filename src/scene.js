@@ -48,7 +48,6 @@ export const executeSellingOrder = async ({client, token, price, owner, tez_amou
     }
   } else {
     owner = owner.client.key_pair.public_key_hash
-    console.log(price, owner, orders)
     const order = orders.filter(x => x.is_buy == false && x.price == price && x.owner == owner)[0]
     if (order)
       prev_token_amount = order.token_amount

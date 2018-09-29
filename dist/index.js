@@ -199,7 +199,6 @@ const executeSellingOrder = exports.executeSellingOrder = async ({ client, token
     }
   } else {
     owner = owner.client.key_pair.public_key_hash;
-    console.log(price, owner, orders);
     const order = orders.filter(x => x.is_buy == false && x.price == price && x.owner == owner)[0];
     if (order) prev_token_amount = order.token_amount;else throw 'No such selling order';
   }
@@ -391,16 +390,17 @@ var _scene2 = _interopRequireDefault(_scene);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 const basicSceneComposition = async ({ clients, tes_token }) => {
-  // const [price, _] = await Scene.createBuyingOrder({client: clients[1], token: tes_token})
-  // const [price, _] = await Scene.createSellingOrder({client: clients[0], token: tes_token})
-  // await Scene.executeBuyingOrder({client: clients[0], owner: clients[1], price, token: tes_token})
-  // await Scene.executeSellingOrder({client: clients[1], owner: clients[0], price, token: tes_token})
-  // await Scene.transferToken({client: clients[0], token: tes_token})
-  // await Scene.cancelOrder({client: clients[0], token: tes_token, price, is_buy: false})
-  // await Scene.rewardLock({client: clients[0]})
-  // await Scene.rewardUnlock({client: clients[0]})
+  const [buying_price, _] = await _scene2.default.createBuyingOrder({ client: clients[1], token: tes_token });
+  const [selling_price, __] = await _scene2.default.createSellingOrder({ client: clients[0], token: tes_token });
+  await _scene2.default.executeBuyingOrder({ client: clients[0], owner: clients[1], price: buying_price, token: tes_token });
+  await _scene2.default.executeSellingOrder({ client: clients[1], owner: clients[0], price: selling_price, token: tes_token });
+  await _scene2.default.transferToken({ client: clients[0], token: tes_token });
+  await _scene2.default.cancelOrder({ client: clients[1], token: tes_token, price: buying_price, is_buy: true });
+  await _scene2.default.cancelOrder({ client: clients[0], token: tes_token, price: selling_price, is_buy: false });
+  await _scene2.default.rewardLock({ client: clients[0] });
   await _scene2.default.depositToReward({ client: clients[0] });
   await _scene2.default.rewardWithdraw({ client: clients[0] });
+  await _scene2.default.rewardUnlock({ client: clients[0] });
 };
 
 const main = async () => {
