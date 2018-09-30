@@ -3,6 +3,7 @@ export const assert = (name, op, client) => {
     throw 'Assert fail: op is empty'
 
   console.log(`
+Date: ${(new Date()).toLocaleString()}
 Assertion: ${name}
 Client: ${client.client.key_pair.public_key_hash}
 Op: ${op.operation_id}`)
@@ -21,7 +22,7 @@ Op: ${op.operation_id}`)
           clearInterval(t)
           resolve()
         }
-      }, 25 * 1000)
+      }, 15 * 1000)
     })
 
     if (equation_fn instanceof Function) {

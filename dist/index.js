@@ -113,6 +113,7 @@ const assert = exports.assert = (name, op, client) => {
   if (!op) throw 'Assert fail: op is empty';
 
   console.log(`
+Date: ${new Date().toLocaleString()}
 Assertion: ${name}
 Client: ${client.client.key_pair.public_key_hash}
 Op: ${op.operation_id}`);
@@ -131,7 +132,7 @@ Op: ${op.operation_id}`);
           clearInterval(t);
           resolve();
         }
-      }, 25 * 1000);
+      }, 15 * 1000);
     });
 
     if (equation_fn instanceof Function) {
@@ -389,6 +390,10 @@ var _scene2 = _interopRequireDefault(_scene);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+const roll = () => {
+  return Math.random() > 0.5;
+};
+
 const basicSceneComposition = async ({ clients, tes_token }) => {
   const [buying_price, _] = await _scene2.default.createBuyingOrder({ client: clients[1], token: tes_token });
   const [selling_price, __] = await _scene2.default.createSellingOrder({ client: clients[0], token: tes_token });
@@ -403,6 +408,39 @@ const basicSceneComposition = async ({ clients, tes_token }) => {
   await _scene2.default.rewardUnlock({ client: clients[0] });
 };
 
+const loopRandomTest = async ({ clients, tes_token }) => {
+  while (true) {
+    if (roll()) {
+      const [buying_price, _] = await _scene2.default.createBuyingOrder({ client: clients[1], token: tes_token });
+      if (roll()) await _scene2.default.executeBuyingOrder({ client: clients[0], owner: clients[1], price: buying_price, token: tes_token });
+
+      if (roll()) await _scene2.default.cancelOrder({ client: clients[1], token: tes_token, price: buying_price, is_buy: true });
+    }
+    if (roll()) {
+      const [selling_price, __] = await _scene2.default.createSellingOrder({ client: clients[0], token: tes_token });
+      if (roll()) await _scene2.default.executeSellingOrder({ client: clients[1], owner: clients[0], price: selling_price, token: tes_token });
+
+      if (roll()) await _scene2.default.cancelOrder({ client: clients[0], token: tes_token, price: selling_price, is_buy: false });
+    }
+
+    if (roll()) {
+      await _scene2.default.transferToken({ client: clients[0], receiver: clients[1], token: tes_token });
+    }
+
+    if (roll()) {
+      await _scene2.default.transferToken({ client: clients[1], receiver: clients[0], token: tes_token });
+    }
+
+    if (roll()) {
+      await _scene2.default.rewardLock({ client: clients[0] });
+      if (roll()) {
+        await _scene2.default.depositToReward({ client: clients[0] });
+        await _scene2.default.rewardWithdraw({ client: clients[0] });
+      } else await _scene2.default.rewardUnlock({ client: clients[0] });
+    }
+  }
+};
+
 const main = async () => {
   const client1 = await _tezexchangeTradebot2.default.getApiClient({
     // host: 'https://znetrpc.tezbox.com',
@@ -414,7 +452,12 @@ const main = async () => {
 
   const tes_token = client1.tokens.TES;
 
-  await basicSceneComposition({
+  // await basicSceneComposition({
+  //   clients: [client1, client2],
+  //   tes_token
+  // })
+
+  await loopRandomTest({
     clients: [client1, client2],
     tes_token
   });
