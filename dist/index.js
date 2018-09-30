@@ -126,7 +126,7 @@ Op: ${op.operation_id}`);
         const ops = JSON.stringify((await client.getHeadCustom('/operation_hashes')));
         count++;
         const found_it = ops.indexOf(op.operation_id) > -1;
-        const timeout = count >= 5;
+        const timeout = count >= 12;
         if (found_it || timeout) {
           console.log(`\x1b[${found_it ? 32 : 31}m%s\x1b[0m`, found_it ? 'Op found' : 'Timeout');
           clearInterval(t);
