@@ -179,8 +179,13 @@ const createBuyingOrder = exports.createBuyingOrder = async ({ client, token, pr
   price = price || genPrice();
   tez_amount = tez_amount || genTez();
 
+  const owner = client.client.key_pair.public_key_hash;
+  const orders = await client.getOrders();
+  const order = orders.filter(x => x.is_buy == true && x.owner == owner && x.price == price)[0];
+  const prev_tez_amount = order ? +order.tez_amount : 0;
+
   const op = await client.createBuying(token, price, tez_amount);
-  await (0, _helper.assert)('Create buying order', op, client)(async () => (await client.getOrders()).filter(x => x.price == price && x.tez_amount == tez_amount * 1000000).length);
+  await (0, _helper.assert)('Create buying order', op, client)(async () => (await client.getOrders()).filter(x => x.is_buy == true && x.price == price && x.tez_amount == tez_amount * 1000000 + prev_tez_amount).length);
 
   return [price, tez_amount];
 };
@@ -249,8 +254,13 @@ const createSellingOrder = exports.createSellingOrder = async ({ client, token, 
   price = price || genPrice();
   token_amount = token_amount || genToken();
 
+  const owner = client.client.key_pair.public_key_hash;
+  const orders = await client.getOrders();
+  const order = orders.filter(x => x.is_buy == false && x.owner == owner && x.price == price)[0];
+  const prev_token_amount = order ? +order.token_amount : 0;
+
   const op = await client.createSelling(token, price, token_amount);
-  await (0, _helper.assert)('Create selling order', op, client)(async () => (await client.getOrders()).filter(x => x.price == price && x.token_amount == token_amount).length);
+  await (0, _helper.assert)('Create selling order', op, client)(async () => (await client.getOrders()).filter(x => x.is_buy == false && x.price == price && x.token_amount == prev_token_amount + token_amount).length);
 
   return [price, token_amount];
 };
