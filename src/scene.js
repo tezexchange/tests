@@ -35,7 +35,7 @@ export const createBuyingOrder = async ({client, token, price, tez_amount}) => {
   await assert('Create buying order', op, client)(async () => {
     const order = (await client.getOrders()).filter(x => x.is_buy == true && x.price == price && x.owner == owner)[0]
     console.log(price, tez_amount, prev_tez_amount, order.tez_amount)
-    return order.tez_amount == (tez_amount * 1000000 + prev_tez_amount)
+    return order.tez_amount == (Math.round(tez_amount * 1000000) + prev_tez_amount)
   })
 
   return [price, tez_amount]
@@ -224,7 +224,7 @@ export const depositToReward = async ({client, xtz_amount}) => {
   })
   await assert('Deposit to reward contract', op, client)(async () => {
     const curr_reward_xtz = (await client.getHeadCustom('/context/contracts/' + reward_kt1)).balance
-    const transferred_xtz = xtz_amount * 1000000
+    const transferred_xtz = Math.round(xtz_amount * 1000000)
     console.log(curr_reward_xtz, prev_reward_xtz, transferred_xtz)
     return curr_reward_xtz == +prev_reward_xtz + transferred_xtz
   })
