@@ -119,6 +119,7 @@ Client: ${client.client.key_pair.public_key_hash}
 Op: ${op.operation_id}`);
 
   return async equation_fn => {
+    let is_timeout = false;
     await new Promise(resolve => {
       let count = 0;
       const t = setInterval(async () => {
@@ -126,7 +127,9 @@ Op: ${op.operation_id}`);
         const ops = JSON.stringify((await client.getHeadCustom('/operation_hashes')));
         count++;
         const found_it = ops.indexOf(op.operation_id) > -1;
-        const timeout = count >= 12;
+        const timeout = count >= 20;
+        if (timeout) is_timeout = true;
+
         if (found_it || timeout) {
           console.log(`\x1b[${found_it ? 32 : 31}m%s\x1b[0m`, found_it ? 'Op found' : 'Timeout');
           clearInterval(t);
@@ -140,7 +143,7 @@ Op: ${op.operation_id}`);
       const result = await equation_fn();
       console.log(`\x1b[${result ? 32 : 31}m%s\x1b[0m`, result ? 'PASS' : 'FAIL');
 
-      if (!result) throw `Assert fail [${name}]`;
+      if (!result && !is_timeout) throw `Assert fail [${name}]`;
     }
   };
 };
@@ -170,6 +173,7 @@ const cancelOrder = exports.cancelOrder = async ({ client, token, is_buy, price 
   const owner = client.client.key_pair.public_key_hash;
   const op = await client.cancelOrder(token, is_buy, price);
   await (0, _helper.assert)('Cancel order', op, client)(async () => {
+    console.log(is_buy, price, owner);
     const order = (await client.getOrders()).filter(x => x.is_buy == is_buy && x.price == price && x.owner == owner);
     return !order.length;
   });
@@ -185,7 +189,10 @@ const createBuyingOrder = exports.createBuyingOrder = async ({ client, token, pr
   const prev_tez_amount = order ? +order.tez_amount : 0;
 
   const op = await client.createBuying(token, price, tez_amount);
-  await (0, _helper.assert)('Create buying order', op, client)(async () => (await client.getOrders()).filter(x => x.is_buy == true && x.price == price && x.tez_amount == tez_amount * 1000000 + prev_tez_amount).length);
+  await (0, _helper.assert)('Create buying order', op, client)(async () => {
+    console.log(price, tez_amount, prev_tez_amount);
+    return (await client.getOrders()).filter(x => x.is_buy == true && x.price == price && x.tez_amount == tez_amount * 1000000 + prev_tez_amount).length;
+  });
 
   return [price, tez_amount];
 };
@@ -214,6 +221,7 @@ const executeSellingOrder = exports.executeSellingOrder = async ({ client, token
   const op = await client.executeSelling(token, price, owner, tez_amount);
   await (0, _helper.assert)('Execute selling order', op, client)(async () => {
     const order = (await client.getOrders()).filter(x => x.is_buy == false && x.price == price && x.owner == owner)[0];
+    console.log(prev_token_amount, order);
     return Math.floor(tez_amount * 1000000 / price) == prev_token_amount - order.token_amount;
   });
 
@@ -244,6 +252,7 @@ const executeBuyingOrder = exports.executeBuyingOrder = async ({ client, token, 
   const op = await client.executeBuying(token, price, owner, token_amount);
   await (0, _helper.assert)('Execute buying order', op, client)(async () => {
     const order = (await client.getOrders()).filter(x => x.is_buy == true && x.price == price && x.owner == owner)[0];
+    console.log(prev_tez_amount, order);
     return price * token_amount == prev_tez_amount - order.tez_amount;
   });
 
@@ -260,7 +269,10 @@ const createSellingOrder = exports.createSellingOrder = async ({ client, token, 
   const prev_token_amount = order ? +order.token_amount : 0;
 
   const op = await client.createSelling(token, price, token_amount);
-  await (0, _helper.assert)('Create selling order', op, client)(async () => (await client.getOrders()).filter(x => x.is_buy == false && x.price == price && x.token_amount == prev_token_amount + token_amount).length);
+  await (0, _helper.assert)('Create selling order', op, client)(async () => {
+    console.log(price, prev_token_amount, token_amount);
+    return (await client.getOrders()).filter(x => x.is_buy == false && x.price == price && x.token_amount == prev_token_amount + token_amount).length;
+  });
 
   return [price, token_amount];
 };
@@ -297,7 +309,11 @@ const rewardLock = exports.rewardLock = async ({ client, token_amount }) => {
   token_amount = token_amount || genToken(token_info.token_amount);
 
   const op = await client.rewardLock(token_amount);
-  await (0, _helper.assert)('Lock reward', op, client)(async () => (await client.getRewardInfo(pkh)).locked_amount == +prev_locked + token_amount);
+  await (0, _helper.assert)('Lock reward', op, client)(async () => {
+    const locked_amount = (await client.getRewardInfo(pkh)).locked_amount;
+    console.log(locked_amount, prev_locked, token_amount);
+    return locked_amount == +prev_locked + token_amount;
+  });
 
   return token_amount;
 };
@@ -310,8 +326,11 @@ const rewardUnlock = exports.rewardUnlock = async ({ client }) => {
 
   const op = await client.rewardUnlock();
   await (0, _helper.assert)('Unlock reward', op, client)(async () => {
-    const token_result = (await client.getTokenInfo(tes_token, pkh)).token_amount == +locked_amount + +prev_token_amount;
-    const reward_result = ((await client.getRewardInfo(pkh)).locked_amount || 0) == 0;
+    const token_amount = (await client.getTokenInfo(tes_token, pkh)).token_amount;
+    const token_result = token_amount == +locked_amount + +prev_token_amount;
+    const locked_amount = (await client.getRewardInfo(pkh)).locked_amount;
+    const reward_result = (locked_amount || 0) == 0;
+    console.log(token_amount, locked_amount, prev_token_amount, locked_amount);
     return token_result && reward_result;
   });
 };
@@ -330,6 +349,7 @@ const rewardWithdraw = exports.rewardWithdraw = async ({ client }) => {
   await (0, _helper.assert)('Withdraw reward', op, client)(async () => {
     const curr_xtz = (await client.getHeadCustom('/context/contracts/' + pkh)).balance;
     const curr_reward_xtz = (await client.getHeadCustom('/context/contracts/' + reward_kt1)).balance;
+    console.log(curr_xtz, prev_xtz, reward_value, curr_reward_xtz, prev_reward_xtz, reward_value);
     return curr_xtz == +prev_xtz + reward_value && curr_reward_xtz == +prev_reward_xtz - reward_value;
   });
 };
@@ -351,6 +371,7 @@ const depositToReward = exports.depositToReward = async ({ client, xtz_amount })
   await (0, _helper.assert)('Deposit to reward contract', op, client)(async () => {
     const curr_reward_xtz = (await client.getHeadCustom('/context/contracts/' + reward_kt1)).balance;
     const transferred_xtz = xtz_amount * 1000000;
+    console.log(curr_reward_xtz, prev_reward_xtz, transferred_xtz);
     return curr_reward_xtz == +prev_reward_xtz + transferred_xtz;
   });
 };
