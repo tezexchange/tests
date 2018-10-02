@@ -33,8 +33,9 @@ export const createBuyingOrder = async ({client, token, price, tez_amount}) => {
 
   const op = await client.createBuying(token, price, tez_amount)
   await assert('Create buying order', op, client)(async () => {
+    const order = (await client.getOrders()).filter(x => x.is_buy == true && x.price == price && x.owner == owner)[0]
     console.log(price, tez_amount, prev_tez_amount)
-    return (await client.getOrders()).filter(x => x.is_buy == true && x.price == price && x.tez_amount == tez_amount * 1000000 + prev_tez_amount).length
+    return order.tez_amount == (tez_amount * 1000000 + prev_tez_amount)
   })
 
   return [price, tez_amount]
@@ -119,8 +120,9 @@ export const createSellingOrder = async ({client, token, price, token_amount}) =
 
   const op = await client.createSelling(token, price, token_amount)
   await assert('Create selling order', op, client)(async () => {
+    const order = (await client.getOrders()).filter(x => x.is_buy == false && x.price == price && x.owner == owner)[0]
     console.log(price, prev_token_amount, token_amount)
-    return (await client.getOrders()).filter(x => x.is_buy == false && x.price == price && x.token_amount == prev_token_amount + token_amount).length
+    return order.token_amount == (prev_token_amount + token_amount)
   })
 
   return [price, token_amount]
@@ -174,15 +176,15 @@ export const rewardUnlock = async ({client}) => {
   const pkh = client.client.key_pair.public_key_hash
   const tes_token = client.tokens.TES
   const prev_token_amount = (await client.getTokenInfo(tes_token, pkh)).token_amount
-  const locked_amount = (await client.getRewardInfo(pkh)).locked_amount || 0
+  const prev_locked_amount = (await client.getRewardInfo(pkh)).locked_amount || 0
 
   const op = await client.rewardUnlock()
   await assert('Unlock reward', op, client)(async () => {
     const token_amount = (await client.getTokenInfo(tes_token, pkh)).token_amount
-    const token_result = token_amount == +locked_amount + +prev_token_amount
+    const token_result = token_amount == +prev_locked_amount + +prev_token_amount
     const locked_amount = (await client.getRewardInfo(pkh)).locked_amount
     const reward_result =  (locked_amount || 0) == 0
-    console.log(token_amount, locked_amount, prev_token_amount, locked_amount)
+    console.log(token_amount, locked_amount, prev_token_amount, prev_locked_amount, locked_amount)
     return token_result && reward_result
   })
 }
