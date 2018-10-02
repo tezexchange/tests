@@ -142,11 +142,13 @@ export const transferToken = async ({client, token, receiver, token_amount}) => 
     const new_receiver_info = await client.getTokenInfo(token, receiver)
 
     if (receiver === sender) {
-      return sender_info.token_amount === receiver_info.token_amount &&
-             sender_info.token_amount === new_sender_info.token_amount &&
-             new_sender_info.token_amount === new_receiver_info.token_amount
+      return sender_info.token_amount == receiver_info.token_amount &&
+             sender_info.token_amount == new_sender_info.token_amount &&
+             new_sender_info.token_amount == new_receiver_info.token_amount
     } else {
-      return sender_info.token_amount - new_sender_info.token_amount === 
+      console.log(sender_info.token_amount, new_sender_info.token_amount,
+             new_receiver_info.token_amount, receiver_info.token_amount)
+      return sender_info.token_amount - new_sender_info.token_amount == 
              new_receiver_info.token_amount - receiver_info.token_amount
     }
   })
