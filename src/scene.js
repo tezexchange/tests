@@ -34,7 +34,7 @@ export const createBuyingOrder = async ({client, token, price, tez_amount}) => {
   const op = await client.createBuying(token, price, tez_amount)
   await assert('Create buying order', op, client)(async () => {
     const order = (await client.getOrders()).filter(x => x.is_buy == true && x.price == price && x.owner == owner)[0]
-    console.log(price, tez_amount, prev_tez_amount)
+    console.log(price, tez_amount, prev_tez_amount, order.tez_amount)
     return order.tez_amount == (tez_amount * 1000000 + prev_tez_amount)
   })
 
@@ -121,7 +121,7 @@ export const createSellingOrder = async ({client, token, price, token_amount}) =
   const op = await client.createSelling(token, price, token_amount)
   await assert('Create selling order', op, client)(async () => {
     const order = (await client.getOrders()).filter(x => x.is_buy == false && x.price == price && x.owner == owner)[0]
-    console.log(price, prev_token_amount, token_amount)
+    console.log(price, prev_token_amount, token_amount, order.token_amount)
     return order.token_amount == (prev_token_amount + token_amount)
   })
 
