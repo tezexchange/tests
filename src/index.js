@@ -60,11 +60,12 @@ const loopRandomTest = async ({clients, tes_token}) => {
 
 const main = async () => {
   const client1 = await tradebot.getApiClient({
-    // host: 'https://znetrpc.tezbox.com',
-    secret_key: 'edskRwCM7hMRBCFuqqAwkrvyrMiRNvA5NVjN8Neg9UfT5xUpcSRJQDb8y2HgBvwAzM6Ah9d4ykZ1HgN8N426ZYrntLES5gZv79'
+    host: 'https://znetrpc.tezbox.com',
+    secret_key: 'edskRcaftjFf9dL6cGTxJjEmruWQghY3FQzfqWoLuXU8DudrpeKhJH1ZSdtAQfQVMQreTizRaMyT8dLVFsi4dERFi7RLjij4QR'
   })
   const client2 = await tradebot.getApiClient({
-    secret_key: 'edskSAnVuT9KDLx77DECAWcqocUzE4KerS7WGaUHCVyRWrYk29RHiY5gWZPVa28EPYYbZKPYg8WaSRbvahGbTCQAJFJ31JiFBu'
+    host: 'https://znetrpc.tezbox.com',
+    secret_key: 'edskSAdL2Gdc7uMkvGZo5mm2CCzkDofWnwnvbSJbrTPzESaZTruCM8XHanMEUrJygUYaqS7NCFZ9dku4uZVbNAWUgQJZRV7NHj'
   })
 
   const tes_token = client1.tokens.TES
@@ -83,5 +84,5 @@ const main = async () => {
 }
 
 main().catch(err => {
-  console.log(`\x1b[31m%s\x1b[0m`, 'ERR: ' + (err instanceof Error ? err : JSON.stringify(err, null, 2)))
+  console.log(`\x1b[31m%s\x1b[0m`, 'ERR: ' + (err instanceof Error ? err.stack : JSON.stringify(err, null, 2)))
 })
