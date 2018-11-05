@@ -61,7 +61,7 @@ const loopRandomTest = async ({clients, tes_token}) => {
 const main = async () => {
   const client1 = await tradebot.getApiClient({
     host: 'https://znetrpc.tezbox.com',
-    secret_key: 'edskRcaftjFf9dL6cGTxJjEmruWQghY3FQzfqWoLuXU8DudrpeKhJH1ZSdtAQfQVMQreTizRaMyT8dLVFsi4dERFi7RLjij4QR'
+    secret_key: 'edskS5JQ4H6YzSN1BXttrXKvdBBZGdQvpkATXEErUHJuGLxDevHpdCVenc4b5tQUWUmqyPNyqa911YrUmNcp88yPubFxYnKdAY'
   })
   const client2 = await tradebot.getApiClient({
     host: 'https://znetrpc.tezbox.com',

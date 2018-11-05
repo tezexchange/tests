@@ -42,6 +42,7 @@ parcelRequire = (function (modules, cache, entry, globalName) {
       }
 
       localRequire.resolve = resolve;
+      localRequire.cache = {};
 
       var module = cache[name] = new newRequire.Module(name);
 
@@ -104,20 +105,20 @@ parcelRequire = (function (modules, cache, entry, globalName) {
   // Override the current require with this new one
   return newRequire;
 })({"helper.js":[function(require,module,exports) {
-'use strict';
+"use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-const assert = exports.assert = (name, op, client) => {
-  if (!op) throw 'Assert fail: op is empty';
+exports.assert = void 0;
 
+const assert = (name, op, client) => {
+  if (!op) throw 'Assert fail: op is empty';
   console.log(`
 Date: ${new Date().toLocaleString()}
 Assertion: ${name}
 Client: ${client.client.key_pair.public_key_hash}
 Op: ${op.operation_id}`);
-
   return async equation_fn => {
     let is_timeout = false;
     await new Promise(resolve => {
@@ -142,20 +143,21 @@ Op: ${op.operation_id}`);
       console.log('Checking equation...');
       const result = await equation_fn();
       console.log(`\x1b[${result ? 32 : 31}m%s\x1b[0m`, result ? 'PASS' : 'FAIL');
-
       if (!result && !is_timeout) throw `Assert fail [${name}]`;
     }
   };
 };
+
+exports.assert = assert;
 },{}],"scene.js":[function(require,module,exports) {
-'use strict';
+"use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.depositToReward = exports.rewardWithdraw = exports.rewardUnlock = exports.rewardLock = exports.transferToken = exports.createSellingOrder = exports.executeBuyingOrder = exports.executeSellingOrder = exports.createBuyingOrder = exports.cancelOrder = undefined;
+exports.default = exports.depositToReward = exports.rewardWithdraw = exports.rewardUnlock = exports.rewardLock = exports.transferToken = exports.createSellingOrder = exports.executeBuyingOrder = exports.executeSellingOrder = exports.createBuyingOrder = exports.cancelOrder = void 0;
 
-var _helper = require('./helper');
+var _helper = require("./helper");
 
 const genPrice = (max = 1000) => {
   return Math.round(Math.random() * max);
@@ -169,7 +171,12 @@ const genToken = (max = 1000) => {
   return Math.round(Math.random() * max);
 };
 
-const cancelOrder = exports.cancelOrder = async ({ client, token, is_buy, price }) => {
+const cancelOrder = async ({
+  client,
+  token,
+  is_buy,
+  price
+}) => {
   const owner = client.client.key_pair.public_key_hash;
   const op = await client.cancelOrder(token, is_buy, price);
   await (0, _helper.assert)('Cancel order', op, client)(async () => {
@@ -179,31 +186,44 @@ const cancelOrder = exports.cancelOrder = async ({ client, token, is_buy, price 
   });
 };
 
-const createBuyingOrder = exports.createBuyingOrder = async ({ client, token, price, tez_amount }) => {
+exports.cancelOrder = cancelOrder;
+
+const createBuyingOrder = async ({
+  client,
+  token,
+  price,
+  tez_amount
+}) => {
   price = price || genPrice();
   tez_amount = tez_amount || genTez();
-
   const owner = client.client.key_pair.public_key_hash;
   const orders = await client.getOrders();
   const order = orders.filter(x => x.is_buy == true && x.owner == owner && x.price == price)[0];
   const prev_tez_amount = order ? +order.tez_amount : 0;
-
   const op = await client.createBuying(token, price, tez_amount);
   await (0, _helper.assert)('Create buying order', op, client)(async () => {
     const order = (await client.getOrders()).filter(x => x.is_buy == true && x.price == price && x.owner == owner)[0];
     console.log(price, tez_amount, prev_tez_amount, order.tez_amount);
     return order.tez_amount == Math.round(tez_amount * 1000000) + prev_tez_amount;
   });
-
   return [price, tez_amount];
 };
 
-const executeSellingOrder = exports.executeSellingOrder = async ({ client, token, price, owner, tez_amount }) => {
+exports.createBuyingOrder = createBuyingOrder;
+
+const executeSellingOrder = async ({
+  client,
+  token,
+  price,
+  owner,
+  tez_amount
+}) => {
   const orders = await client.getOrders();
   let prev_token_amount = '';
 
   if (!price || !owner) {
     const order = orders.filter(x => x.is_buy == false)[0];
+
     if (order) {
       price = order.price;
       owner = order.owner;
@@ -218,23 +238,30 @@ const executeSellingOrder = exports.executeSellingOrder = async ({ client, token
   }
 
   tez_amount = tez_amount || genTez(price * prev_token_amount / 1000000);
-
   const op = await client.executeSelling(token, price, owner, tez_amount);
   await (0, _helper.assert)('Execute selling order', op, client)(async () => {
     const order = (await client.getOrders()).filter(x => x.is_buy == false && x.price == price && x.owner == owner)[0];
     console.log(prev_token_amount, order);
     return Math.floor(tez_amount * 1000000 / price) == prev_token_amount - order.token_amount;
   });
-
   return [price, owner, prev_token_amount, tez_amount];
 };
 
-const executeBuyingOrder = exports.executeBuyingOrder = async ({ client, token, price, owner, token_amount }) => {
+exports.executeSellingOrder = executeSellingOrder;
+
+const executeBuyingOrder = async ({
+  client,
+  token,
+  price,
+  owner,
+  token_amount
+}) => {
   const orders = await client.getOrders();
   let prev_tez_amount = '';
 
   if (!price || !owner) {
     const order = orders.filter(x => x.is_buy == true)[0];
+
     if (order) {
       price = order.price;
       owner = order.owner;
@@ -249,44 +276,51 @@ const executeBuyingOrder = exports.executeBuyingOrder = async ({ client, token, 
   }
 
   token_amount = token_amount || genToken(prev_tez_amount / price);
-
   const op = await client.executeBuying(token, price, owner, token_amount);
   await (0, _helper.assert)('Execute buying order', op, client)(async () => {
     const order = (await client.getOrders()).filter(x => x.is_buy == true && x.price == price && x.owner == owner)[0];
     console.log(prev_tez_amount, order);
     return price * token_amount == prev_tez_amount - order.tez_amount;
   });
-
   return [price, owner, prev_tez_amount, token_amount];
 };
 
-const createSellingOrder = exports.createSellingOrder = async ({ client, token, price, token_amount }) => {
+exports.executeBuyingOrder = executeBuyingOrder;
+
+const createSellingOrder = async ({
+  client,
+  token,
+  price,
+  token_amount
+}) => {
   price = price || genPrice();
   token_amount = token_amount || genToken();
-
   const owner = client.client.key_pair.public_key_hash;
   const orders = await client.getOrders();
   const order = orders.filter(x => x.is_buy == false && x.owner == owner && x.price == price)[0];
   const prev_token_amount = order ? +order.token_amount : 0;
-
   const op = await client.createSelling(token, price, token_amount);
   await (0, _helper.assert)('Create selling order', op, client)(async () => {
     const order = (await client.getOrders()).filter(x => x.is_buy == false && x.price == price && x.owner == owner)[0];
     console.log(price, prev_token_amount, token_amount, order.token_amount);
     return order.token_amount == prev_token_amount + token_amount;
   });
-
   return [price, token_amount];
 };
 
-const transferToken = exports.transferToken = async ({ client, token, receiver, token_amount }) => {
+exports.createSellingOrder = createSellingOrder;
+
+const transferToken = async ({
+  client,
+  token,
+  receiver,
+  token_amount
+}) => {
   const sender = client.client.key_pair.public_key_hash;
   receiver = receiver ? receiver.client.key_pair.public_key_hash : sender;
   token_amount = token_amount || genToken();
-
   const sender_info = await client.getTokenInfo(token, sender);
   const receiver_info = await client.getTokenInfo(token, receiver);
-
   const op = await client.tokenTransfer(token, receiver, token_amount);
   await (0, _helper.assert)('Transfer token', op, client)(async () => {
     const new_sender_info = await client.getTokenInfo(token, sender);
@@ -299,34 +333,38 @@ const transferToken = exports.transferToken = async ({ client, token, receiver, 
       return sender_info.token_amount - new_sender_info.token_amount == new_receiver_info.token_amount - receiver_info.token_amount;
     }
   });
-
   return token_amount;
 };
 
-const rewardLock = exports.rewardLock = async ({ client, token_amount }) => {
+exports.transferToken = transferToken;
+
+const rewardLock = async ({
+  client,
+  token_amount
+}) => {
   const pkh = client.client.key_pair.public_key_hash;
   const tes_token = client.tokens.TES;
   const token_info = await client.getTokenInfo(tes_token, pkh);
   const prev_locked = (await client.getRewardInfo(pkh)).locked_amount || 0;
-
   token_amount = token_amount || genToken(token_info.token_amount);
-
   const op = await client.rewardLock(token_amount);
   await (0, _helper.assert)('Lock reward', op, client)(async () => {
     const locked_amount = (await client.getRewardInfo(pkh)).locked_amount;
     console.log(locked_amount, prev_locked, token_amount);
     return locked_amount == +prev_locked + token_amount;
   });
-
   return token_amount;
 };
 
-const rewardUnlock = exports.rewardUnlock = async ({ client }) => {
+exports.rewardLock = rewardLock;
+
+const rewardUnlock = async ({
+  client
+}) => {
   const pkh = client.client.key_pair.public_key_hash;
   const tes_token = client.tokens.TES;
   const prev_token_amount = (await client.getTokenInfo(tes_token, pkh)).token_amount;
   const prev_locked_amount = (await client.getRewardInfo(pkh)).locked_amount || 0;
-
   const op = await client.rewardUnlock();
   await (0, _helper.assert)('Unlock reward', op, client)(async () => {
     const token_amount = (await client.getTokenInfo(tes_token, pkh)).token_amount;
@@ -338,7 +376,11 @@ const rewardUnlock = exports.rewardUnlock = async ({ client }) => {
   });
 };
 
-const rewardWithdraw = exports.rewardWithdraw = async ({ client }) => {
+exports.rewardUnlock = rewardUnlock;
+
+const rewardWithdraw = async ({
+  client
+}) => {
   const pkh = client.client.key_pair.public_key_hash;
   const reward_kt1 = client.contracts.reward;
   const prev_xtz = (await client.getHeadCustom('/context/contracts/' + pkh)).balance;
@@ -347,7 +389,6 @@ const rewardWithdraw = exports.rewardWithdraw = async ({ client }) => {
   const locked_amount = reward_info.locked_amount || 0;
   const rewards = reward_info.rewards.filter(x => x.date > reward_info.lock_date);
   const reward_value = rewards.reduce((acc, x) => Math.floor(locked_amount * x.xtz_amount / 100000000) + acc, 0);
-
   const op = await client.rewardWithdraw();
   await (0, _helper.assert)('Withdraw reward', op, client)(async () => {
     const curr_xtz = (await client.getHeadCustom('/context/contracts/' + pkh)).balance;
@@ -357,12 +398,16 @@ const rewardWithdraw = exports.rewardWithdraw = async ({ client }) => {
   });
 };
 
-const depositToReward = exports.depositToReward = async ({ client, xtz_amount }) => {
+exports.rewardWithdraw = rewardWithdraw;
+
+const depositToReward = async ({
+  client,
+  xtz_amount
+}) => {
   const pkh = client.client.key_pair.public_key_hash;
   const prev_xtz = (await client.getHeadCustom('/context/contracts/' + pkh)).balance;
   const reward_kt1 = client.contracts.reward;
   const prev_reward_xtz = (await client.getHeadCustom('/context/contracts/' + reward_kt1)).balance;
-
   xtz_amount = xtz_amount || genTez(+prev_xtz / 10 / 1000000);
   const op = await client.client.transfer({
     destination: reward_kt1,
@@ -379,7 +424,8 @@ const depositToReward = exports.depositToReward = async ({ client, xtz_amount })
   });
 };
 
-exports.default = {
+exports.depositToReward = depositToReward;
+var _default = {
   createBuyingOrder,
   createSellingOrder,
   executeBuyingOrder,
@@ -389,9 +435,7 @@ exports.default = {
   rewardUnlock,
   rewardWithdraw,
   depositToReward,
-  transferToken
-
-  // if (1) {
+  transferToken // if (1) {
   //   // const op = await client1.createBuying(tes_token, 210, 1)
   //   // const op = await client1.createSelling(tes_token, 342, 100)
   //   // const op = await client1.executeSelling(tes_token, 231, 'tz1UJPFiywU6uGeMpZnPrY4w7zNhLekvJaUo', 342 * 100 / 1000000)
@@ -411,16 +455,13 @@ exports.default = {
   // }
 
 };
+exports.default = _default;
 },{"./helper":"helper.js"}],"index.js":[function(require,module,exports) {
-'use strict';
+"use strict";
 
-var _tezexchangeTradebot = require('tezexchange-tradebot');
+var _tezexchangeTradebot = _interopRequireDefault(require("tezexchange-tradebot"));
 
-var _tezexchangeTradebot2 = _interopRequireDefault(_tezexchangeTradebot);
-
-var _scene = require('./scene');
-
-var _scene2 = _interopRequireDefault(_scene);
+var _scene = _interopRequireDefault(require("./scene"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -428,66 +469,148 @@ const roll = () => {
   return Math.random() > 0.5;
 };
 
-const basicSceneComposition = async ({ clients, tes_token }) => {
-  const [buying_price, _] = await _scene2.default.createBuyingOrder({ client: clients[1], token: tes_token });
-  const [selling_price, __] = await _scene2.default.createSellingOrder({ client: clients[0], token: tes_token });
-  await _scene2.default.executeBuyingOrder({ client: clients[0], owner: clients[1], price: buying_price, token: tes_token });
-  await _scene2.default.executeSellingOrder({ client: clients[1], owner: clients[0], price: selling_price, token: tes_token });
-  await _scene2.default.transferToken({ client: clients[0], token: tes_token });
-  await _scene2.default.cancelOrder({ client: clients[1], token: tes_token, price: buying_price, is_buy: true });
-  await _scene2.default.cancelOrder({ client: clients[0], token: tes_token, price: selling_price, is_buy: false });
-  await _scene2.default.rewardLock({ client: clients[0] });
-  await _scene2.default.depositToReward({ client: clients[0] });
-  await _scene2.default.rewardWithdraw({ client: clients[0] });
-  await _scene2.default.rewardUnlock({ client: clients[0] });
+const basicSceneComposition = async ({
+  clients,
+  tes_token
+}) => {
+  const [buying_price, _] = await _scene.default.createBuyingOrder({
+    client: clients[1],
+    token: tes_token
+  });
+  const [selling_price, __] = await _scene.default.createSellingOrder({
+    client: clients[0],
+    token: tes_token
+  });
+  await _scene.default.executeBuyingOrder({
+    client: clients[0],
+    owner: clients[1],
+    price: buying_price,
+    token: tes_token
+  });
+  await _scene.default.executeSellingOrder({
+    client: clients[1],
+    owner: clients[0],
+    price: selling_price,
+    token: tes_token
+  });
+  await _scene.default.transferToken({
+    client: clients[0],
+    token: tes_token
+  });
+  await _scene.default.cancelOrder({
+    client: clients[1],
+    token: tes_token,
+    price: buying_price,
+    is_buy: true
+  });
+  await _scene.default.cancelOrder({
+    client: clients[0],
+    token: tes_token,
+    price: selling_price,
+    is_buy: false
+  });
+  await _scene.default.rewardLock({
+    client: clients[0]
+  });
+  await _scene.default.depositToReward({
+    client: clients[0]
+  });
+  await _scene.default.rewardWithdraw({
+    client: clients[0]
+  });
+  await _scene.default.rewardUnlock({
+    client: clients[0]
+  });
 };
 
-const loopRandomTest = async ({ clients, tes_token }) => {
+const loopRandomTest = async ({
+  clients,
+  tes_token
+}) => {
   while (true) {
     if (roll()) {
-      const [buying_price, _] = await _scene2.default.createBuyingOrder({ client: clients[1], token: tes_token });
-      if (roll()) await _scene2.default.executeBuyingOrder({ client: clients[0], owner: clients[1], price: buying_price, token: tes_token });
-
-      if (roll()) await _scene2.default.cancelOrder({ client: clients[1], token: tes_token, price: buying_price, is_buy: true });
-    }
-    if (roll()) {
-      const [selling_price, __] = await _scene2.default.createSellingOrder({ client: clients[0], token: tes_token });
-      if (roll()) await _scene2.default.executeSellingOrder({ client: clients[1], owner: clients[0], price: selling_price, token: tes_token });
-
-      if (roll()) await _scene2.default.cancelOrder({ client: clients[0], token: tes_token, price: selling_price, is_buy: false });
-    }
-
-    if (roll()) {
-      await _scene2.default.transferToken({ client: clients[0], receiver: clients[1], token: tes_token });
-    }
-
-    if (roll()) {
-      await _scene2.default.transferToken({ client: clients[1], receiver: clients[0], token: tes_token });
+      const [buying_price, _] = await _scene.default.createBuyingOrder({
+        client: clients[1],
+        token: tes_token
+      });
+      if (roll()) await _scene.default.executeBuyingOrder({
+        client: clients[0],
+        owner: clients[1],
+        price: buying_price,
+        token: tes_token
+      });
+      if (roll()) await _scene.default.cancelOrder({
+        client: clients[1],
+        token: tes_token,
+        price: buying_price,
+        is_buy: true
+      });
     }
 
     if (roll()) {
-      await _scene2.default.rewardLock({ client: clients[0] });
+      const [selling_price, __] = await _scene.default.createSellingOrder({
+        client: clients[0],
+        token: tes_token
+      });
+      if (roll()) await _scene.default.executeSellingOrder({
+        client: clients[1],
+        owner: clients[0],
+        price: selling_price,
+        token: tes_token
+      });
+      if (roll()) await _scene.default.cancelOrder({
+        client: clients[0],
+        token: tes_token,
+        price: selling_price,
+        is_buy: false
+      });
+    }
+
+    if (roll()) {
+      await _scene.default.transferToken({
+        client: clients[0],
+        receiver: clients[1],
+        token: tes_token
+      });
+    }
+
+    if (roll()) {
+      await _scene.default.transferToken({
+        client: clients[1],
+        receiver: clients[0],
+        token: tes_token
+      });
+    }
+
+    if (roll()) {
+      await _scene.default.rewardLock({
+        client: clients[0]
+      });
+
       if (roll()) {
-        await _scene2.default.depositToReward({ client: clients[0] });
-        await _scene2.default.rewardWithdraw({ client: clients[0] });
-      } else await _scene2.default.rewardUnlock({ client: clients[0] });
+        await _scene.default.depositToReward({
+          client: clients[0]
+        });
+        await _scene.default.rewardWithdraw({
+          client: clients[0]
+        });
+      } else await _scene.default.rewardUnlock({
+        client: clients[0]
+      });
     }
   }
 };
 
 const main = async () => {
-  const client1 = await _tezexchangeTradebot2.default.getApiClient({
+  const client1 = await _tezexchangeTradebot.default.getApiClient({
     host: 'https://znetrpc.tezbox.com',
-    secret_key: 'edskRcaftjFf9dL6cGTxJjEmruWQghY3FQzfqWoLuXU8DudrpeKhJH1ZSdtAQfQVMQreTizRaMyT8dLVFsi4dERFi7RLjij4QR'
+    secret_key: 'edskS5JQ4H6YzSN1BXttrXKvdBBZGdQvpkATXEErUHJuGLxDevHpdCVenc4b5tQUWUmqyPNyqa911YrUmNcp88yPubFxYnKdAY'
   });
-  const client2 = await _tezexchangeTradebot2.default.getApiClient({
+  const client2 = await _tezexchangeTradebot.default.getApiClient({
     host: 'https://znetrpc.tezbox.com',
     secret_key: 'edskSAdL2Gdc7uMkvGZo5mm2CCzkDofWnwnvbSJbrTPzESaZTruCM8XHanMEUrJygUYaqS7NCFZ9dku4uZVbNAWUgQJZRV7NHj'
   });
-
-  const tes_token = client1.tokens.TES;
-
-  // await basicSceneComposition({
+  const tes_token = client1.tokens.TES; // await basicSceneComposition({
   //   clients: [client1, client2],
   //   tes_token
   // })
@@ -496,7 +619,6 @@ const main = async () => {
     clients: [client1, client2],
     tes_token
   });
-
   console.log('Finish!');
 };
 

@@ -17,9 +17,9 @@
   },
   "homepage": "https://github.com/tezexchange/tests#readme",
   "dependencies": {
-    "tezexchange-tradebot": "^1.0.21"
+    "tezexchange-tradebot": "^1.0.25"
   },
   "devDependencies": {
-    "parcel-bundler": "^1.9.7"
+    "parcel-bundler": "^1.10.3"
   }
 }
