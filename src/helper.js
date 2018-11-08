@@ -17,7 +17,7 @@ Op: ${op.operation_id}`)
         const ops = JSON.stringify(await client.getHeadCustom('/operation_hashes'))
         count++
         const found_it = ops.indexOf(op.operation_id) > -1
-        const timeout = count >= 20
+        const timeout = count >= 60
         if (timeout) is_timeout = true
 
         if (found_it || timeout) {
